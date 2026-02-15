@@ -3,7 +3,6 @@
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,11 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from 'next/navigation';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
-
-const userAvatarImage = PlaceHolderImages.find(p => p.id === 'user-avatar');
 
 export function UserNav() {
   const router = useRouter();
@@ -41,11 +37,6 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-             {user.photoURL ? (
-               <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />
-            ) : userAvatarImage && (
-              <AvatarImage data-ai-hint={userAvatarImage.imageHint} src={userAvatarImage.imageUrl} alt={userAvatarImage.description} />
-            )}
             <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </Button>
