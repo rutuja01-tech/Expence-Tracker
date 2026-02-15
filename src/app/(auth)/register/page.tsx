@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { Loader2 } from 'lucide-react';
+import { useAuth, useUser } from '@/firebase';
+import { createUserWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
@@ -24,6 +27,9 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -34,14 +40,49 @@ export default function RegisterPage() {
     },
   });
 
+  useEffect(() => {
+    if (user && !isUserLoading) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
+
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    // Mock register
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    document.cookie = "auth=true; path=/; max-age=3600";
-    router.push('/');
-    router.refresh();
+    try {
+      await createUserWithEmailAndPassword(auth, data.email, data.password);
+    } catch (e) {
+      const error = e as AuthError;
+      console.error(error);
+      let errorMessage = 'An unexpected error occurred.';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email is already registered.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak. Please use at least 6 characters.';
+          break;
+        default:
+          errorMessage = 'Registration failed. Please try again.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Registration Failed',
+        description: errorMessage,
+      });
+      setIsLoading(false);
+    }
   };
+
+  if (isUserLoading || user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
