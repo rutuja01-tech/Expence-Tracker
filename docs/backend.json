@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a single financial transaction made by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Transaction entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this transaction. This ID links to an external authentication system's user identifier. (Relationship: User 1:N Transaction)"
+        },
+        "title": {
+          "type": "string",
+          "description": "A descriptive title for the financial transaction."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the transaction."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category to which this transaction belongs (e.g., Food, Rent, Transport)."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date and time when the transaction occurred, in ISO 8601 format.",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional detailed notes or description for the transaction."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "amount",
+        "category",
+        "date"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores individual financial transactions for a specific user. Each document includes 'userId' for direct ownership verification, supporting authorization independence. This path ensures all transactions within this subcollection belong to the '{userId}' specified in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the User who owns this transaction, directly matching request.auth.uid."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for a specific transaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for 'FinanceFlow' prioritizes security, scalability, and debuggability by strictly adhering to the core design principles, especially Authorization Independence and enabling secure Query-able Access Patterns (QAPs). The central design choice is to use a hierarchical path structure that embeds user ownership directly into the document's location.\n\n**Authorization Independence via Denormalization:**\nEach 'Transaction' document will be stored in a subcollection under the specific user who owns it, following the path `/users/{userId}/transactions/{transactionId}`. Critically, every 'Transaction' document will also explicitly contain a `userId` field. This denormalization means that security rules do not need to perform expensive and non-atomic `get()` calls to a parent document or a separate user profile to determine ownership. Instead, rules can directly compare `request.auth.uid` (the authenticated user's ID) with the `{userId}` wildcard in the path *and* the `resource.data.userId` field within the transaction document itself. This ensures that a transaction's authorization context is self-contained, simplifying rule logic and making operations atomic.\n\n**Support for Query-able Access Patterns (QAPs):**\nThis path-based ownership directly enables secure `list` operations, which is a key aspect of QAPs. Since all transactions for a given user are segregated into their own dedicated subcollection (`/users/{userId}/transactions`), a user can only query (list) transactions within their *own* subcollection. Firestore security rules can be written to simply allow `read` and `list` operations if `request.auth.uid == userId` (where `userId` is the wildcard in the path). This structure inherently prevents users from listing or even attempting to list transactions belonging to other users. The collection `/users/{userId}/transactions` maintains a homogeneous security posture, meaning all documents within it share the exact same access requirements (owned by `{userId}`), further simplifying security rules and making them easy to debug. The app's 'Transaction Explorer' feature, which requires dynamic fetching, search, and filter, will naturally query against `/users/{request.auth.uid}/transactions`, relying on Firestore's native querying capabilities within this secured, user-scoped subcollection."
+  }
+}
