@@ -46,34 +46,32 @@ export default function RegisterPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const onSubmit = async (data: RegisterFormValues) => {
+  const onSubmit = (data: RegisterFormValues) => {
     setIsLoading(true);
-    try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
-    } catch (e) {
-      const error = e as AuthError;
-      console.error(error);
-      let errorMessage = 'An unexpected error occurred.';
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'This email is already registered.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Password is too weak. Please use at least 6 characters.';
-          break;
-        default:
-          errorMessage = 'Registration failed. Please try again.';
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: errorMessage,
+    createUserWithEmailAndPassword(auth, data.email, data.password)
+      .catch((e) => {
+        const error = e as AuthError;
+        let errorMessage = 'An unexpected error occurred.';
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'This email is already registered.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Password is too weak. Please use at least 6 characters.';
+            break;
+          default:
+            errorMessage = 'Registration failed. Please try again.';
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: errorMessage,
+        });
+        setIsLoading(false);
       });
-      setIsLoading(false);
-    }
   };
 
   if (isUserLoading || user) {

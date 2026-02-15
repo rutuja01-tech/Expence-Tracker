@@ -44,33 +44,31 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = (data: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-    } catch (e) {
-      const error = e as AuthError;
-      console.error(error);
-      let errorMessage = 'An unexpected error occurred.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid email or password.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        default:
-          errorMessage = 'Login failed. Please try again.';
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: errorMessage,
-      });
-      setIsLoading(false);
-    }
+    signInWithEmailAndPassword(auth, data.email, data.password)
+      .catch((e) => {
+        const error = e as AuthError;
+        let errorMessage = 'An unexpected error occurred.';
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid email or password.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          default:
+            errorMessage = 'Login failed. Please try again.';
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: errorMessage,
+        });
+        setIsLoading(false);
+    });
   };
 
   if (isUserLoading || user) {
